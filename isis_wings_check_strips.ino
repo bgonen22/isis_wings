@@ -1,6 +1,6 @@
 #include <Adafruit_NeoPixel.h>
 #include <avr/power.h>
-
+#define NUM_OF_STRIPS 9
 // Which pin on the Arduino is connected to the NeoPixels?
 #define LED_PIN1 2          
 #define LED_PIN2 3          
@@ -61,7 +61,7 @@ int head_color = 0;
 
 void setup() {
  Serial.begin(9600);
-  for (int i = 0; i<10; ++i){
+  for (int i = 0; i<=NUM_OF_STRIPS; ++i){
   pixels_arr[i].begin(); 
  }  
 }
@@ -102,7 +102,7 @@ void loop() {
   }
 }
 void show_all() {  
-  for (int i = 0; i<10; ++i) {
+  for (int i = 0; i<NUM_OF_STRIPS; ++i) {    
     pixels_arr[i].show(); // This sends the updated pixel color to the hardware.
   }
 
@@ -175,7 +175,7 @@ void lightAllTraces(int i, float power) {
 }
 void set_one_color_all_traces (int pixel_num,int color,float power) {
   //Serial.println("ddd");
-  for (int i=0; i<10;++i) {
+  for (int i=0; i<NUM_OF_STRIPS;++i) {
     //int color_update = olor)%NUMOFCOLORS; //when we want phase berween the strips
     pixels_arr[i].setPixelColor(pixel_num, Wheel(color,power));         
   }
