@@ -86,6 +86,7 @@ void loop() {
     }      
     //Serial.println(i);
     // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
+    
     lightAllTraces(i, HIGHLEVEL); // the first led.
     if (i>0) {
         lightAllTraces(i-1, MEDIUMLEVEL); 
@@ -96,11 +97,11 @@ void loop() {
            }
         }        
     }  
-    show_all; // This sends the updated pixel color to the hardware.
+    show_all(); // This sends the updated pixel color to the hardware.
     delay(delayval); // Delay for a period of time (in milliseconds).
   }
 }
-void show_all() {
+void show_all() {  
   for (int i = 0; i<10; ++i) {
     pixels_arr[i].show(); // This sends the updated pixel color to the hardware.
   }
@@ -113,7 +114,7 @@ int LastLed (int i) {
   if (JUMP > 3) {
     lightAllTraces(i-3, 0); 
   }
-  show_all; // This sends the updated pixel color to the hardware.
+  show_all(); // This sends the updated pixel color to the hardware.
   delay(delayval); // Delay for a period of time (in milliseconds).
 
   
@@ -126,7 +127,7 @@ int LastLed (int i) {
   lightAllTraces(i-JUMP+1,HIGHLEVEL); 
 
 
-  show_all; // This sends the updated pixel color to the hardware.
+  show_all(); // This sends the updated pixel color to the hardware.
   delay(delayval); // Delay for a period of time (in milliseconds).
 
   lightAllTraces(i-JUMP+2,HIGHLEVEL); 
@@ -136,7 +137,7 @@ int LastLed (int i) {
   if (JUMP > 3) {
    lightAllTraces(i-1, 0);                                 
   }
-  show_all; // This sends the updated pixel color to the hardware.
+  show_all(); // This sends the updated pixel color to the hardware.
   delay(delayval); // Delay for a period of time (in milliseconds).
   if (JUMP > 3) { 
     lightAllTraces(i, 0);    
@@ -173,6 +174,7 @@ void lightAllTraces(int i, float power) {
    } 
 }
 void set_one_color_all_traces (int pixel_num,int color,float power) {
+  //Serial.println("ddd");
   for (int i=0; i<10;++i) {
     //int color_update = olor)%NUMOFCOLORS; //when we want phase berween the strips
     pixels_arr[i].setPixelColor(pixel_num, Wheel(color,power));         
