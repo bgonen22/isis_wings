@@ -56,8 +56,6 @@ Adafruit_NeoPixel pixels_7 = Adafruit_NeoPixel(NUMPIXELS, LED_PIN7, NEO_GRB + NE
 Adafruit_NeoPixel pixels_8 = Adafruit_NeoPixel(NUMPIXELS, LED_PIN8, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel pixels_9 = Adafruit_NeoPixel(NUMPIXELS, LED_PIN9, NEO_GRB + NEO_KHZ800);
 
-Adafruit_NeoPixel pixels_dummy = Adafruit_NeoPixel(NUMPIXELS, 18, NEO_GRB + NEO_KHZ800);
-
 Adafruit_NeoPixel pixels_arr[9] ={pixels_1,pixels_2, pixels_3,pixels_4,pixels_5,pixels_6,pixels_7,pixels_8,pixels_9};
 
 
@@ -253,7 +251,7 @@ void set_one_color_all_traces (int pixel_num,int color,float power) {
 // The colours are a transition r - g - b - back to r.
 // the level is how brigt will be tghe light (0 to 255).
 uint32_t Wheel(byte color, float level) {
-  Adafruit_NeoPixel pixels = pixels_dummy;
+  Adafruit_NeoPixel pixels ;
   if (level==0) return pixels.Color(0, 0, 0);
   //level=100;   
   float power;
