@@ -13,17 +13,18 @@
 #define LED_PIN8 9          
 #define LED_PIN9 10          
 
-
+#define SWITCH_TIME 10 //number of secs between animations when auto change
+#define NUM_OF_STRIPS 9
 #define BUTTON 11
 // How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS      60
+#define NUMPIXELS      12
 
 // How many colors do you want (more colors, more gradient)?
 #define NUMOFCOLORS      6
 
 
 // jump between to traces (head trace to head trace - min JUMP = 3)
-#define JUMP 5
+#define JUMP 9
 
 // traces power will be like wave or like teeth
 #define FADE 0 //1 - traces power like a wave, 0 always first led max power
@@ -33,7 +34,7 @@
 
 
 // delay between iterations
-int delayval = 100; // delay for half a second
+int delayval = 200; // delay for half a second
 
 // light level 1=255
 float HIGHLEVEL=0.4;
@@ -63,13 +64,14 @@ Adafruit_NeoPixel pixels_arr[9] ={pixels_1,pixels_2, pixels_3,pixels_4,pixels_5,
 int head_color = 0;
 int debounce;
 bool autoCycle = 0;
-int animation;
+int animation =1;
 bool phase;
 uint32_t auto_time;
 
 void setup() {
  Serial.begin(9600); 
- for (int i = 0; i<10; ++i){
+ pinMode(BUTTON, INPUT_PULLUP);     
+ for (int i = 0; i<NUM_OF_STRIPS; ++i){
   pixels_arr[i].begin(); 
  }  
 }
@@ -78,16 +80,18 @@ void setup() {
 // LOOP
 // ---------------------
 void loop() {
-  Serial.print("animation b ");
+  Serial.print("animation loop ");
   Serial.println(animation);
   
   switch (animation) {
     case 0: {
+      clear_all();
       phase = 0;
       trace();
       break;
     }
     case 1: {
+      clear_all();
       phase = 1;
       trace();
       break;
@@ -95,6 +99,12 @@ void loop() {
   }
   
   delay(delayval); // Delay for a period of time (in milliseconds).
+}
+
+void clear_all() {
+  for (int i=0; i<NUM_OF_STRIPS;++i) {
+    pixels_arr[i].clear();
+  }
 }
 
 void trace () {
@@ -132,9 +142,10 @@ void trace () {
   }
 }
 void show_all() {
-  for (int i = 0; i<10; ++i) {
+  for (int i = 0; i<NUM_OF_STRIPS; ++i) {
     pixels_arr[i].show(); // This sends the updated pixel color to the hardware.
   }
+  delay(delayval);
 
 }
 bool check_button() {
@@ -144,19 +155,21 @@ bool check_button() {
   uint32_t t = millis();               // Current time, milliseconds  
   if(digitalRead(BUTTON)) {        // Image select?
     debounce = 0;                      // Not pressed -- reset counter
-    if (autoCycle && (millis()- auto_time) >= 10000L) {
+    if (autoCycle && (millis()- auto_time) >= (SWITCH_TIME * 1000L)) {
         auto_time = millis();
         next_animation();  
         return 1;      
     }
   } else {                             // Pressed...
-    if(++debounce >= 2) {             // Debounce input
+    if(++debounce >= 1) {             // Debounce input
       next_animation();
       while(!digitalRead(BUTTON)); // Wait for release
       // If held 1+ sec, toggle auto-cycle mode on/off
-      if((millis() - t) >= 1000L) {
+      if((millis() - t) >= 500L) {
         autoCycle = !autoCycle;
         auto_time = millis();
+        Serial.print("autoCycle: ");
+        Serial.println(autoCycle);
         //Serial.print("Time pressed: ");
         //uint32_t time_pressed = millis() - t;
         //Serial.println(time_pressed);        
@@ -183,7 +196,7 @@ int LastLed (int i) {
     lightAllTraces(i-3, 0); 
   }
   show_all(); // This sends the updated pixel color to the hardware.
-  delay(delayval); // Delay for a period of time (in milliseconds).
+  //delay(delayval); // Delay for a period of time (in milliseconds).
 
   
   lightAllTraces(i, MEDIUMLEVEL);                     
@@ -196,7 +209,7 @@ int LastLed (int i) {
 
 
   show_all(); // This sends the updated pixel color to the hardware.
-  delay(delayval); // Delay for a period of time (in milliseconds).
+  //delay(delayval); // Delay for a period of time (in milliseconds).
 
   lightAllTraces(i-JUMP+2,HIGHLEVEL); 
   lightAllTraces(i-JUMP+1, MEDIUMLEVEL);                     
@@ -206,7 +219,7 @@ int LastLed (int i) {
    lightAllTraces(i-1, 0);                                 
   }
   show_all(); // This sends the updated pixel color to the hardware.
-  delay(delayval); // Delay for a period of time (in milliseconds).
+  //delay(delayval); // Delay for a period of time (in milliseconds).
   if (JUMP > 3) { 
     lightAllTraces(i, 0);    
   }
@@ -224,8 +237,8 @@ void lightAllTraces(int i, float power) {
    while (i >= 0 ) {     
      int color = (head_color+trace_num)%NUMOFCOLORS;
      if (FROM_MIDDLE) {
-     // set_one_color_all_traces(NUMPIXELS/2+i, color,power);
-      //set_one_color_all_traces(NUMPIXELS/2-i, color,power);
+      set_one_color_all_traces(NUMPIXELS/2+i, color,power);
+      set_one_color_all_traces(NUMPIXELS/2-i, color,power);
      } else {
        set_one_color_all_traces(i,color,power);     
      }
@@ -242,11 +255,16 @@ void lightAllTraces(int i, float power) {
 }
 
 void set_one_color_all_traces (int pixel_num,int color,float power) {
-  for (int i=0; i<10;++i) {
-    int color_update = (phase*abs(i-5)+color)%NUMOFCOLORS; //when we want phase berween the strips
-    pixels_arr[i].setPixelColor(pixel_num, Wheel(color_update,power));         
+  for (int i=0; i<NUM_OF_STRIPS;++i) {
+    //int color_updatea = (phase*abs(i-5)+color)%NUMOFCOLORS; //when we want phase berween the strips 
+    int pixel_num_update = pixel_num - (phase*abs(i-5));
+    if (pixel_num_update < 0) {
+      continue;
+    }
+    pixels_arr[i].setPixelColor(pixel_num_update, Wheel(color,power));         
   }
 }
+
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 // the level is how brigt will be tghe light (0 to 255).
@@ -269,4 +287,3 @@ uint32_t Wheel(byte color, float level) {
      return pixels.Color(level*power, level*(255 - power), 0);
   }
 }
-
