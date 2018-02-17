@@ -34,7 +34,7 @@
 
 
 // delay between iterations
-int delayval = 200; // delay for half a second
+int delayval =5; // delay im msec
 
 // light level 1=255
 float HIGHLEVEL=0.4;
@@ -64,10 +64,10 @@ Adafruit_NeoPixel pixels_arr[9] ={pixels_1,pixels_2, pixels_3,pixels_4,pixels_5,
 int head_color = 0;
 int debounce;
 bool autoCycle = 0;
-int animation =1;
+int animation =0;
 bool phase;
 uint32_t auto_time;
-
+float pixel_num = 0;
 void setup() {
  Serial.begin(9600); 
  pinMode(BUTTON, INPUT_PULLUP);     
@@ -80,23 +80,31 @@ void setup() {
 // LOOP
 // ---------------------
 void loop() {
-  Serial.print("animation loop ");
-  Serial.println(animation);
-  
+  //Serial.print("animation loop ");
+  //Serial.println(animation);
+  bool change = check_button();
   switch (animation) {
     case 0: {
       clear_all();
       phase = 0;
-      trace();
+      trace(pixel_num);
       break;
     }
     case 1: {
       clear_all();
       phase = 1;
-      trace();
+      trace(pixel_num);
       break;
     }
   }
+  pixel_num = pixel_num+0.1; 
+  // when pixel_num get large the animation start to be slow, need to go back and keep the head_color 
+  if (pixel_num > JUMP + NUMPIXELS-1 ) {
+    pixel_num -= JUMP;
+    head_color = (head_color+1)%NUMOFCOLORS;        
+  }
+  
+ 
   
   delay(delayval); // Delay for a period of time (in milliseconds).
 }
@@ -107,47 +115,32 @@ void clear_all() {
   }
 }
 
-void trace () {
+void trace (float i) {
     // For a set of NeoPixels the first NeoPixel is 0, second is 1, all the way up to the count of pixels minus one.
-  int i = -1;
+  //float i = -1;
   int last_led;
   if (FROM_MIDDLE) {
     last_led = NUMPIXELS/2;  
   } else {
     last_led = NUMPIXELS -1;
-  }
-  while(1){
-    bool change = check_button();
-    if (change) return;
-    i++;
-//    Serial.println(head_color);
-    
-    if (i == last_led) {
+  }   
+  if (i == last_led) {
       i = LastLed(i);
-      continue;    
-    }      
+     // continue;    
+     return;
+   }      
     //Serial.println(i);
-    // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
-    lightAllTraces(i, HIGHLEVEL); // the first led.
-    if (i>0) {
-        lightAllTraces(i-1, MEDIUMLEVEL); 
-        if (i>1) {
-           lightAllTraces(i-2, LOWLEVEL); 
-           if(i>2 && JUMP >3) {
-                lightAllTraces(i-3, 0); // turn off the distant led.            
-           }
-        }        
-    }  
+    
+    lightAllTraces(i, HIGHLEVEL); // the first led.  
     show_all();
-  }
+
 }
 void show_all() {
   for (int i = 0; i<NUM_OF_STRIPS; ++i) {
     pixels_arr[i].show(); // This sends the updated pixel color to the hardware.
   }
-  delay(delayval);
-
 }
+
 bool check_button() {
   //Serial.println("HERE ");
   //int readb = digitalRead(BUTTON);
@@ -184,27 +177,23 @@ bool check_button() {
 
 void next_animation() {
   animation = (animation+1)%2;   // Switch to next image
+  pixel_num = 0;
   Serial.print("animation ");
   Serial.println(animation);
 }
 
-int LastLed (int i) {
+int LastLed (float i) {
   lightAllTraces(i, HIGHLEVEL); 
-  lightAllTraces(i-1, MEDIUMLEVEL);
-  lightAllTraces(i-2, LOWLEVEL); 
   if (JUMP > 3) {
     lightAllTraces(i-3, 0); 
   }
   show_all(); // This sends the updated pixel color to the hardware.
   //delay(delayval); // Delay for a period of time (in milliseconds).
 
-  
-  lightAllTraces(i, MEDIUMLEVEL);                     
-  lightAllTraces(i-1,LOWLEVEL);
   if (JUMP > 3) {
    lightAllTraces(i-2, 0);                 
   }
-  head_color = (head_color+1)%NUMOFCOLORS;                    
+  head_color = (head_color+1)%NUMOFCOLORS;        
   lightAllTraces(i-JUMP+1,HIGHLEVEL); 
 
 
@@ -212,9 +201,7 @@ int LastLed (int i) {
   //delay(delayval); // Delay for a period of time (in milliseconds).
 
   lightAllTraces(i-JUMP+2,HIGHLEVEL); 
-  lightAllTraces(i-JUMP+1, MEDIUMLEVEL);                     
-  head_color = (head_color-1)%NUMOFCOLORS;                    
-  lightAllTraces(i, LOWLEVEL);
+  head_color = (head_color-1)%NUMOFCOLORS;                      
   if (JUMP > 3) {
    lightAllTraces(i-1, 0);                                 
   }
@@ -225,13 +212,15 @@ int LastLed (int i) {
   }
   head_color = (head_color+1)%NUMOFCOLORS;                    
   lightAllTraces(i-JUMP+3, HIGHLEVEL); 
-  lightAllTraces(i-JUMP+2, MEDIUMLEVEL);                     
-  lightAllTraces(i-JUMP+1, LOWLEVEL);
-
-  i=i-JUMP+3;
-  return i;
+  
+  pixel_num=i-JUMP+3;
+  return pixel_num;
 }
-void lightAllTraces(int i, float power) {
+
+// ------------------
+// lightAllTraces
+// ------------------
+void lightAllTraces(float i, float power) {
   int trace_num = 0;
    //Serial.println(i);
    while (i >= 0 ) {     
@@ -239,8 +228,27 @@ void lightAllTraces(int i, float power) {
      if (FROM_MIDDLE) {
       set_one_color_all_traces(NUMPIXELS/2+i, color,power);
       set_one_color_all_traces(NUMPIXELS/2-i, color,power);
-     } else {
-       set_one_color_all_traces(i,color,power);     
+     } else {       
+       int led_ref = (int)(i+0.01);
+       /*
+       Serial.print("real led ");   
+       Serial.println(i);
+       Serial.print("ref led ");   
+       Serial.println(led_ref);
+       */
+       // Light the trace consider the sidtance from the real source (i)
+       for (int led = led_ref -1 ; led < led_ref + 3; ++led) {  // light 2 leds before and 2 leds after the the main light
+          float dist = 1 + abs(led-i);          
+          float power_update = power / pow(dist,2);
+          /*
+          Serial.print("led ");   
+          Serial.print(led);
+          Serial.print(" power ");   
+          Serial.println(power_update);
+          */          
+          set_one_color_all_traces(led,color,power_update); 
+       }     
+  
      }
       i-=JUMP;     
       trace_num++;
@@ -250,7 +258,7 @@ void lightAllTraces(int i, float power) {
         } else if (power == LOWLEVEL) {
           power = HIGHLEVEL;      
         }
-      }
+      }      
    } 
 }
 
