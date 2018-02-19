@@ -64,10 +64,11 @@ Adafruit_NeoPixel pixels_arr[9] ={pixels_1,pixels_2, pixels_3,pixels_4,pixels_5,
 int head_color = 0;
 int debounce;
 bool autoCycle = 0;
-int animation =0;
+int animation =2;
 bool phase;
 uint32_t auto_time;
 float pixel_num = 0;
+float advance_ver = 0.1;
 void setup() {
  Serial.begin(9600); 
  pinMode(BUTTON, INPUT_PULLUP);     
@@ -88,32 +89,105 @@ void loop() {
       clear_all();
       phase = 0;
       trace(pixel_num);
+      advence_pixel();
       break;
     }
     case 1: {
       clear_all();
       phase = 1;
       trace(pixel_num);
+      advence_pixel();
       break;
     }
-  }
-  pixel_num = pixel_num+0.1; 
-  // when pixel_num get large the animation start to be slow, need to go back and keep the head_color 
-  if (pixel_num > JUMP + NUMPIXELS-1 ) {
-    pixel_num -= JUMP;
-    head_color = (head_color+1)%NUMOFCOLORS;        
+    case 2: {
+      clear_all();
+      vertical_trace(pixel_num);
+      advance_pixel_ver();
+    }
   }
   
- 
-  
+  //Serial.println(pixel_num);
   delay(delayval); // Delay for a period of time (in milliseconds).
 }
+
 
 void clear_all() {
   for (int i=0; i<NUM_OF_STRIPS;++i) {
     pixels_arr[i].clear();
   }
 }
+// ---------------------
+// advance_pixel_ver
+// ---------------------
+void advance_pixel_ver () {
+  pixel_num = pixel_num + advance_ver; 
+  if (pixel_num > NUM_OF_STRIPS + 4) {
+    pixel_num = NUM_OF_STRIPS;
+    advance_ver = -0.1;
+    head_color = (head_color+1)%NUMOFCOLORS;  
+  } else if (pixel_num < 0) {
+    pixel_num = 0;
+    advance_ver = 0.1;
+    head_color = (head_color+1)%NUMOFCOLORS;  
+  }
+}
+
+// ---------------------
+// advance_pixel
+// ---------------------
+void advence_pixel () {
+  pixel_num = pixel_num+0.1; 
+  // when pixel_num get large the animation start to be slow, need to go back and keep the head_color 
+  if (pixel_num > JUMP + NUMPIXELS-1 ) {
+    pixel_num -= JUMP;
+    head_color = (head_color+1)%NUMOFCOLORS;        
+  }   
+}
+
+// ---------------------
+// vertical_trace
+// ---------------------
+void vertical_trace(float i) {      
+    lightTracesVer(i, HIGHLEVEL); // the first led.  
+    show_all();
+}
+
+// ---------------------
+// lightAllTracesVer
+// ---------------------
+void lightTracesVer(float i, float power) {       
+     int led_ref = (int)(i+0.01);
+     // Light the trace consider the sidtance from the real source (i)
+     for (int led = led_ref -1 ; led < led_ref + 3; ++led) {  // light 2 leds before and 2 leds after the the main light
+      //Serial.println(led);
+       float dist = 1 + abs(led-i);       
+       if (dist == 0) dist = 1;
+       float power_update = power / pow(dist,2);
+       //Serial.print("dist ");
+       //Serial.println(dist);
+       set_one_color_all_strip_ver(led,head_color,power_update); 
+     }          
+     if (FADE) {
+        if (power == HIGHLEVEL) {
+          power = LOWLEVEL;      
+        } else if (power == LOWLEVEL) {
+          power = HIGHLEVEL;      
+        }
+      }         
+}
+
+// ---------------------
+// set_one_color_all_strip_ver
+// ---------------------
+void set_one_color_all_strip_ver (int strip,int color,float power) {  
+  if (strip <0 || strip > NUM_OF_STRIPS - 1 ) {
+    return;   
+  }
+  for (int i=0; i<NUMPIXELS;++i) {
+    pixels_arr[strip].setPixelColor(i, Wheel(color,power));         
+  }
+}
+
 
 void trace (float i) {
     // For a set of NeoPixels the first NeoPixel is 0, second is 1, all the way up to the count of pixels minus one.
@@ -150,23 +224,25 @@ bool check_button() {
     debounce = 0;                      // Not pressed -- reset counter
     if (autoCycle && (millis()- auto_time) >= (SWITCH_TIME * 1000L)) {
         auto_time = millis();
-        next_animation();  
+        next_animation();          
         return 1;      
     }
   } else {                             // Pressed...
     if(++debounce >= 1) {             // Debounce input
-      next_animation();
+      next_animation();      
       while(!digitalRead(BUTTON)); // Wait for release
       // If held 1+ sec, toggle auto-cycle mode on/off
       if((millis() - t) >= 500L) {
         autoCycle = !autoCycle;
-        auto_time = millis();
-        Serial.print("autoCycle: ");
-        Serial.println(autoCycle);
+        auto_time = millis();        
         //Serial.print("Time pressed: ");
         //uint32_t time_pressed = millis() - t;
         //Serial.println(time_pressed);        
+      } else {
+         autoCycle = 0;
       }
+      Serial.print("autoCycle: ");
+      Serial.println(autoCycle);
       debounce = 0;
       return 1;
     }
@@ -176,7 +252,7 @@ bool check_button() {
 
 
 void next_animation() {
-  animation = (animation+1)%2;   // Switch to next image
+  animation = (animation+1)%3;   // Switch to next image
   pixel_num = 0;
   Serial.print("animation ");
   Serial.println(animation);
